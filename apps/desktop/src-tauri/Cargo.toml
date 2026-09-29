@@ -38,7 +38,7 @@ chrono = "0.4"
 rusqlite = { version = "0.39", features = ["bundled"] }
 tauri-plugin-updater = "2.10.0"
 tauri-plugin-process = "2.3.1"
-sysinfo = { version = "0.37", default-features = false, features = ["system", "component", "disk"] }
+sysinfo = { version = "0.39", default-features = false, features = ["system", "component", "disk"] }
 trash = "5"
 tauri-plugin-autostart = "2"
 
