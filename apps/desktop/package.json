@@ -43,7 +43,7 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "codemirror": "^6.0.2",
-    "lucide-react": "^1.24.0",
+    "lucide-react": "^1.48.0",
     "posthog-js": "^1.399.1",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
