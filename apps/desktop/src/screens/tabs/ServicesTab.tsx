@@ -541,7 +541,14 @@ function ServiceRow({ service, isSelected, onSelect, onDockerAction, onKillProce
     const p = service.rawPort;
     return (
         <div>
-            <button className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-white/2 transition-colors" onClick={onSelect}>
+            <div
+                role="button"
+                tabIndex={0}
+                aria-expanded={isSelected}
+                className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-white/2 transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+                onClick={onSelect}
+                onKeyDown={e => { if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); onSelect(); } }}
+            >
                 {catIcon(service.category)}
                 <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
@@ -589,7 +596,7 @@ function ServiceRow({ service, isSelected, onSelect, onDockerAction, onKillProce
                     )}
                     {isSelected ? <ChevronDown className="h-3.5 w-3.5 text-zinc-600" /> : <ChevronRight className="h-3.5 w-3.5 text-zinc-600" />}
                 </div>
-            </button>
+            </div>
 
             {/* Expanded detail */}
             {isSelected && (
