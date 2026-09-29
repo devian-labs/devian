@@ -19,6 +19,6 @@
     "release": "./scripts/release.sh"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   }
 }
