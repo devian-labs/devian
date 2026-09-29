@@ -1,0 +1,24 @@
+{
+  "name": "devian",
+  "private": true,
+  "description": "Devian — see and control what AI coding agents do on your machine",
+  "license": "MIT",
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm run tauri:dev -w @devian/desktop",
+    "build": "npm run build --workspaces",
+    "desktop:dev": "npm run tauri:dev -w @devian/desktop",
+    "desktop:build": "npm run tauri:build -w @devian/desktop",
+    "desktop:web": "npm run dev -w @devian/desktop",
+    "landing:dev": "npm run dev -w @devian/landing",
+    "landing:build": "npm run build -w @devian/landing",
+    "typecheck": "npm run build -w @devian/desktop",
+    "lint": "npm run lint -w @devian/landing",
+    "release": "./scripts/release.sh"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

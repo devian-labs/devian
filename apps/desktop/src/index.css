@@ -1,0 +1,192 @@
+@import 'tailwindcss';
+
+@plugin 'tailwindcss-animate';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+
+  --color-chart-1: hsl(var(--chart-1));
+  --color-chart-2: hsl(var(--chart-2));
+  --color-chart-3: hsl(var(--chart-3));
+  --color-chart-4: hsl(var(--chart-4));
+  --color-chart-5: hsl(var(--chart-5));
+}
+
+/*
+  The default border color has changed to `currentcolor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
+  }
+}
+
+@layer base {
+
+    :root,
+    .dark {
+        /** Base colors */
+        --clr-dark-a0: 0 0% 0%;
+        --clr-light-a0: 0 0% 100%;
+
+        /** Theme primary colors */
+        --clr-primary-a0: 215 43% 58%;
+        --clr-primary-a10: 216 43% 63%;
+        --clr-primary-a20: 217 43% 68%;
+        --clr-primary-a30: 217 42% 72%;
+        --clr-primary-a40: 218 42% 77%;
+        --clr-primary-a50: 219 43% 82%;
+
+        /** Theme surface colors */
+        --clr-surface-a0: 0 0% 7%;
+        --clr-surface-a10: 0 0% 16%;
+        --clr-surface-a20: 0 0% 25%;
+        --clr-surface-a30: 0 0% 34%;
+        --clr-surface-a40: 0 0% 44%;
+        --clr-surface-a50: 0 0% 55%;
+
+        /** Theme tonal surface colors */
+        --clr-surface-tonal-a0: 220 10% 12%;
+        --clr-surface-tonal-a10: 220 6% 20%;
+        --clr-surface-tonal-a20: 220 4% 29%;
+        --clr-surface-tonal-a30: 228 3% 38%;
+        --clr-surface-tonal-a40: 225 2% 48%;
+        --clr-surface-tonal-a50: 225 2% 57%;
+
+        /** Success colors */
+        --clr-success-a0: 160 63% 36%;
+        --clr-success-a10: 160 63% 56%;
+        --clr-success-a20: 160 63% 76%;
+
+        /** Warning colors */
+        --clr-warning-a0: 38 60% 41%;
+        --clr-warning-a10: 38 60% 61%;
+        --clr-warning-a20: 38 60% 81%;
+
+        /** Danger colors */
+        --clr-danger-a0: 0 65% 37%;
+        --clr-danger-a10: 0 65% 57%;
+        --clr-danger-a20: 0 66% 77%;
+
+        /** Info colors */
+        --clr-info-a0: 217 61% 34%;
+        --clr-info-a10: 217 61% 54%;
+        --clr-info-a20: 217 62% 74%;
+
+        /** Shadcn specific vars (mapped to custom colors) */
+        --background: var(--clr-surface-a0);
+        --foreground: var(--clr-light-a0);
+
+        --card: var(--clr-surface-a10);
+        --card-foreground: var(--clr-light-a0);
+
+        --popover: var(--clr-surface-a10);
+        --popover-foreground: var(--clr-light-a0);
+
+        --primary: var(--clr-primary-a0);
+        --primary-foreground: var(--clr-light-a0);
+
+        --secondary: var(--clr-surface-tonal-a0);
+        --secondary-foreground: var(--clr-light-a0);
+
+        --muted: var(--clr-surface-tonal-a0);
+        --muted-foreground: var(--clr-surface-a40);
+
+        --accent: var(--clr-primary-a20);
+        --accent-foreground: var(--clr-light-a0);
+
+        --destructive: var(--clr-danger-a0);
+        --destructive-foreground: var(--clr-light-a0);
+
+        --border: var(--clr-surface-a20);
+        --input: var(--clr-surface-a20);
+        --ring: var(--clr-primary-a0);
+
+        --radius: 0.5rem;
+    }
+}
+
+@layer base {
+    * {
+        @apply border-border;
+    }
+
+    body {
+        @apply bg-background text-foreground;
+        user-select: none;
+        -webkit-user-select: none;
+    }
+    
+    input, textarea {
+        user-select: auto;
+        -webkit-user-select: auto;
+    }
+}
+/* ── Accessibility preferences (Settings → Appearance & accessibility) ── */
+
+html.reduce-motion *,
+html.reduce-motion *::before,
+html.reduce-motion *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+}
+
+/* Lift secondary text and hairlines so they clear WCAG AA on the dark surface. */
+html.high-contrast .text-zinc-500 { color: #b8b8c0 !important; }
+html.high-contrast .text-zinc-600 { color: #a1a1aa !important; }
+html.high-contrast .text-zinc-700 { color: #8d8d96 !important; }
+html.high-contrast .text-zinc-400 { color: #d4d4d8 !important; }
+html.high-contrast .border-white\/5,
+html.high-contrast .border-white\/\[0\.06\],
+html.high-contrast .divide-white\/5 > * + *,
+html.high-contrast .divide-white\/\[0\.06\] > * + * { border-color: rgba(255, 255, 255, 0.18) !important; }
+html.high-contrast .border-white\/10 { border-color: rgba(255, 255, 255, 0.28) !important; }
+
+/* Visible focus for every interactive element, not just keyboard-detected focus. */
+html.focus-rings :is(button, a, input, textarea, select, [role="tab"], [role="switch"], [tabindex]):focus {
+    outline: 2px solid hsl(var(--primary));
+    outline-offset: 2px;
+}

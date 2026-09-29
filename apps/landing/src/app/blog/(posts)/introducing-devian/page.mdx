@@ -1,0 +1,37 @@
+# Devian 2.0: Stay in control of your AI agents
+
+Coding agents are fast. In an afternoon, Claude Code, Codex or Cursor can run hundreds of commands, edit dozens of files and start a handful of dev servers. Most of that happens in a terminal you've already scrolled past.
+
+Devian 2.0 is built for that. It reads the history your agents already keep on disk and puts it in one place, so you can see what they did, clean up after them and keep an eye on what they cost. It's free and open source.
+
+## What's in it
+
+### Sessions
+One timeline across Claude Code, Codex, OpenCode, Cursor and Antigravity: what you asked, every command they ran and every file they changed. Force pushes, `sudo`, `rm -rf` outside the project, `curl | sh`, `.env` edits and global installs are flagged, and you can mark sessions as reviewed.
+
+### Runtime and leftovers
+Processes, ports and Docker containers are traced back to the session that started them. If a dev server or test runner is still running after the agent finished, it shows up as a leftover you can stop in one click.
+
+### Memory
+Agents quietly build up memory about you and your projects: `CLAUDE.md`, `AGENTS.md`, Claude Code auto-memory, Cursor rules, Codex memories. Devian lists all of it, and you can edit or forget entries in the built-in editor without opening another app.
+
+### Usage, spend and plan limits
+Tokens per day, agent, project and model, priced at list rates so you can see what a day of agent work would cost on the API. Turn on plan limits and your Claude and Codex 5-hour and weekly windows, with reset times, stay in the top bar.
+
+If you use more than one Claude Code account (personal, work, Bedrock), each config folder shows up on its own and you choose which ones to include.
+
+### Cleanup
+Old transcripts, rewind checkpoints, undo snapshots and editor caches pile up. Devian finds them and moves what you pick to the Trash, alongside `node_modules` and Docker leftovers.
+
+### An MCP server for your agents
+Connect Devian to your agents in one click. They can then ask which dev servers are running, get a free port and see what other agents did in the same project, instead of guessing.
+
+## Private by default
+
+Devian reads everything in place, on your machine. Your code, prompts and agent history are never uploaded. The only network calls are update checks and, if you turn plan limits on, a request straight to Anthropic or OpenAI using the login your agent already saved.
+
+## Free
+
+Every feature is free. There's no account and no license key. Devian is MIT licensed and [built in the open](https://github.com/devian-labs/devian).
+
+[Download Devian](/#download)
