@@ -72,7 +72,7 @@ jobs:
       - name: Build installers
         run: npm run tauri:build -w @devian/desktop -- ${{ matrix.args }}
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.artifact }}
           retention-days: 14
