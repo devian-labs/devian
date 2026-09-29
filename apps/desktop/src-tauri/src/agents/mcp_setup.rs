@@ -85,7 +85,7 @@ pub fn status() -> Vec<McpStatus> {
     // A connection made from another copy of Devian (an old build, a dev build)
     // still counts as connected, but the user should know it points elsewhere.
     let points_elsewhere = |path: &Path| {
-        !current.is_empty() && std::fs::read_to_string(path).is_ok_and(|t| t.contains("devian") && !t.contains(current.as_str()))
+        !current.is_empty() && std::fs::read_to_string(path).is_ok_and(|t| points_to_other_copy(&t, &current))
     };
     let mut list = vec![
         McpStatus {
@@ -119,6 +119,14 @@ pub fn status() -> Vec<McpStatus> {
         }
     }
     list
+}
+
+/// True when a config mentions Devian but not this executable. JSON and TOML
+/// store the path escaped, which matters for Windows backslashes.
+fn points_to_other_copy(config: &str, exe: &str) -> bool {
+    let escaped = serde_json::to_string(exe).unwrap_or_default();
+    let escaped = escaped.trim_matches('"');
+    config.contains("devian") && !config.contains(exe) && !config.contains(escaped)
 }
 
 fn backup(p: &Path) -> Result<(), String> {
@@ -213,6 +221,16 @@ pub fn connect(agent: &str) -> Result<String, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn recognises_this_copy_in_escaped_windows_paths() {
+        let exe = r"C:\Program Files\Devian\devian-desktop.exe";
+        let toml = codex_config_with_devian("", exe);
+        assert!(!points_to_other_copy(&toml, exe), "{toml}");
+        let json = serde_json::to_string_pretty(&json!({"mcpServers": {"devian": {"command": exe}}})).unwrap();
+        assert!(!points_to_other_copy(&json, exe), "{json}");
+        assert!(points_to_other_copy(&codex_config_with_devian("", r"D:\old\devian.exe"), exe));
+    }
 
     #[test]
     fn merge_keeps_existing_servers_and_backs_up() {
