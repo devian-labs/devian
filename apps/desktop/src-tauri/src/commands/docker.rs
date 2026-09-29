@@ -21,6 +21,7 @@ pub struct DockerContainerInfo {
     pub project_name: String,
 }
 
+#[cfg(target_os = "macos")]
 fn shell_quote(value: &str) -> String {
     format!("'{}'", value.replace('\'', "'\\''"))
 }

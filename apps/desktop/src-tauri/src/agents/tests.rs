@@ -12,8 +12,16 @@ fn write(p: &Path, text: &str) {
 
 fn age(p: &Path, days: u64) {
     let t = SystemTime::now() - Duration::from_secs(days * 86_400);
-    let f = if p.is_dir() { fs::File::open(p) } else { fs::File::options().write(true).open(p) };
-    f.unwrap().set_modified(t).unwrap();
+    let mut opts = fs::File::options();
+    opts.write(true);
+    // Windows only opens a directory as a handle with backup semantics.
+    #[cfg(windows)]
+    std::os::windows::fs::OpenOptionsExt::custom_flags(&mut opts, 0x0200_0000);
+    #[cfg(not(windows))]
+    if p.is_dir() {
+        opts.write(false).read(true);
+    }
+    opts.open(p).unwrap().set_modified(t).unwrap();
 }
 
 fn transcript(cwd: &Path, ts: &str) -> String {
