@@ -1,0 +1,31 @@
+# How Devian reads your agents' history
+
+Devian doesn't hook into your agents or proxy their traffic. Every agent already writes a detailed record of its work to disk; Devian reads those files, read-only, and never changes them.
+
+## Where each agent keeps its history
+
+- **Claude Code**: JSONL transcripts in `~/.claude/projects`, including subagents, for every Claude config folder you have.
+- **Codex**: rollout files in `~/.codex/sessions`.
+- **OpenCode**: its local SQLite database.
+- **Cursor**: composer history in its local state database. Most Cursor history lives in the cloud, so this is partial.
+- **Antigravity**: plans, tasks and walkthroughs in its brain folder. Transcripts are encoded, so this is partial.
+
+## Counting tokens correctly
+
+Transcripts repeat themselves. Claude Code writes one line per content block, and each line carries the same usage numbers, so Devian counts each message once by its ID. Codex reports running totals, so Devian takes differences between them. Imported sessions are skipped so nothing is counted twice.
+
+Spend is the API-equivalent cost at Anthropic's published list prices, including the separate rates for 5-minute and 1-hour cache writes. If you're on a subscription, it's what the same work would have cost on the API.
+
+## Tracing leftovers back to a session
+
+Every process has a parent. Devian walks the process tree from each running agent and matches processes by start time, so a reused process ID is never mistaken for an agent's child. When an agent exits, its children are re-parented, and the command line and working directory are used to link them back to the session. Anything that outlives its session is a leftover.
+
+Stopping one is careful: Devian stops the whole tree gracefully first, and asks before stopping anything it matched by inference.
+
+## Safe by design
+
+- Agent history is only read, never modified.
+- Cleanup and Forget move files to the Trash.
+- Memory edits are checked for conflicts, in case an agent wrote the same file, and previous versions are kept.
+
+The code is all [on GitHub](https://github.com/devian-labs/devian) if you want to check.

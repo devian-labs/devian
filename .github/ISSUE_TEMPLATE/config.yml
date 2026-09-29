@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions and ideas
+    url: https://github.com/devian-labs/devian/discussions
+    about: Ask a question or share an idea. You can also use Send feedback in the app.
+  - name: Report a security vulnerability
+    url: https://github.com/devian-labs/devian/security/advisories/new
+    about: Please report security issues privately, not as public issues.

@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+dist-ssr/
+.next/
+out/
+apps/desktop/src-tauri/target/
+apps/desktop/src-tauri/gen/schemas/
+*.tsbuildinfo
+next-env.d.ts
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+*.pem
+updater_key
+*.key
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editors & OS
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
+.claude/
+.agents/
+
+# Deployment
+.vercel
