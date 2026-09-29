@@ -1,308 +1,161 @@
-import { useEffect, useState } from "react";
-import { ChevronDown, Download, Terminal, Copy } from "lucide-react";
-import pkgData from "../../package.json";
-import { HOMEBREW_COMMANDS, LATEST_RELEASE_URL, RELEASES_API_URL } from "@/config/site";
+"use client";
 
-interface Asset {
-    name: string;
-    browser_download_url: string;
-    size: number;
+import { useState } from "react";
+import { BellRing, ChevronDown, Copy, Download, Terminal } from "lucide-react";
+import { GITHUB_URL, HOMEBREW_COMMANDS } from "@/config/site";
+import { extension, fmtSize, installers, type Asset, type Platform, useReleases } from "@/lib/releases";
+
+const track = (event: string, label: string) => {
+    if (typeof window !== "undefined" && window.gtag) window.gtag("event", event, { event_category: "download", event_label: label });
+};
+
+const PLATFORMS: { id: Platform; name: string; requirement: string; Logo: (p: { className?: string }) => React.ReactElement; tone: string }[] = [
+    { id: "mac", name: "macOS", requirement: "Apple Silicon · macOS 12+", Logo: AppleLogo, tone: "text-white" },
+    { id: "windows", name: "Windows", requirement: "Windows 10+ · x64", Logo: WindowsLogo, tone: "text-blue-400" },
+    { id: "linux", name: "Linux", requirement: "Ubuntu 22.04+ · x64", Logo: LinuxLogo, tone: "text-orange-400" },
+];
+
+function CopyBlock({ label, lines, event }: { label: string; lines: string[]; event: string }) {
+    const [copied, setCopied] = useState(false);
+    return (
+        <div className="w-full bg-[#0A0A0C] border border-white/10 rounded-2xl overflow-hidden">
+            <div className="bg-white/5 px-4 py-2.5 border-b border-white/5 flex items-center justify-between gap-3">
+                <span className="flex items-center gap-2 text-xs font-mono text-white/50"><Terminal className="h-3.5 w-3.5" />{label}</span>
+                <button
+                    onClick={() => {
+                        navigator.clipboard.writeText(lines.join("\n")).catch(() => {});
+                        setCopied(true);
+                        track(event, label);
+                        setTimeout(() => setCopied(false), 2000);
+                    }}
+                    className="text-white/40 hover:text-white transition flex items-center gap-1.5 text-xs bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded-lg"
+                >
+                    <Copy className="h-3.5 w-3.5" />{copied ? "Copied" : "Copy"}
+                </button>
+            </div>
+            <pre className="p-5 text-[13px] md:text-sm font-mono text-[#4ADE80] text-left overflow-x-auto">{lines.map((l) => `$ ${l}`).join("\n")}</pre>
+        </div>
+    );
 }
 
-interface GithubRelease {
-    id: number;
-    name: string;
-    tag_name: string;
-    published_at: string;
-    html_url: string;
-    assets: Asset[];
+function PlatformCard({ platform, files, version }: { platform: (typeof PLATFORMS)[number]; files: Asset[]; version: string }) {
+    const [primary, ...others] = files;
+    const { Logo } = platform;
+    return (
+        <div className={`rounded-2xl p-5 flex flex-col gap-4 text-left ${platform.id === "mac" ? "bg-white text-black" : "bg-[#0A0A0C] border border-white/10 text-white"}`}>
+            <div className="flex items-center gap-3">
+                <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${platform.id === "mac" ? "bg-black/5" : "bg-white/5 border border-white/10"}`}>
+                    <Logo className={`h-5 w-5 ${platform.id === "mac" ? "text-black" : platform.tone}`} />
+                </div>
+                <div>
+                    <div className="text-sm font-bold">{platform.name}</div>
+                    <div className={`text-[11px] ${platform.id === "mac" ? "text-black/45" : "text-white/40"}`}>{platform.requirement}</div>
+                </div>
+            </div>
+            {primary ? (
+                <>
+                    <a
+                        href={primary.browser_download_url}
+                        onClick={() => track(`download_${platform.id}`, version)}
+                        className={`flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-bold transition-colors ${platform.id === "mac" ? "bg-black text-white hover:bg-black/85" : "bg-white/10 hover:bg-white/15"}`}
+                    >
+                        <Download className="h-4 w-4" /> Download {extension(primary.name)}
+                    </a>
+                    <div className={`text-[11px] -mt-1 text-center ${platform.id === "mac" ? "text-black/45" : "text-white/40"}`}>
+                        {fmtSize(primary.size)}
+                        {others.length > 0 && <> · also{" "}
+                            {others.map((a, i) => (
+                                <span key={a.name}>
+                                    {i > 0 && ", "}
+                                    <a href={a.browser_download_url} onClick={() => track(`download_${platform.id}`, version)} className="underline underline-offset-2 hover:opacity-80">{extension(a.name)}</a>
+                                </span>
+                            ))}
+                        </>}
+                    </div>
+                </>
+            ) : (
+                <div className={`rounded-xl py-2.5 text-center text-sm ${platform.id === "mac" ? "bg-black/5 text-black/45" : "bg-white/5 text-white/40"}`}>Not in this release</div>
+            )}
+        </div>
+    );
 }
 
 export function DownloadsSection() {
-    const [releases, setReleases] = useState<GithubRelease[]>([]);
-    const [loading, setLoading] = useState(true);
+    const { releases, latest, status } = useReleases();
     const [showHistory, setShowHistory] = useState(false);
-    const [copied, setCopied] = useState(false);
-    const [copiedQuarantine, setCopiedQuarantine] = useState(false);
-
-    useEffect(() => {
-        fetch(RELEASES_API_URL)
-            .then((res) => res.json())
-            .then((data) => {
-                if (Array.isArray(data)) setReleases(data);
-                setLoading(false);
-            })
-            .catch((err) => {
-                console.error("Failed to fetch releases", err);
-                setLoading(false);
-            });
-    }, []);
-
-    const getAssetUrl = (assets: Asset[], extension: string) =>
-        assets.find((a) => a.name.endsWith(extension))?.browser_download_url;
-
-    const getAssetSize = (assets: Asset[], extension: string) => {
-        const asset = assets.find((a) => a.name.endsWith(extension));
-        if (!asset) return null;
-        return (asset.size / (1024 * 1024)).toFixed(1) + " MB";
-    };
-
-    const latestRelease = releases.length > 0 ? releases[0] : null;
-    const oldReleases = releases.length > 1 ? releases.slice(1) : [];
-
-    const macLink = latestRelease
-        ? getAssetUrl(latestRelease.assets, ".dmg")
-        : LATEST_RELEASE_URL;
-    const macSize = latestRelease ? getAssetSize(latestRelease.assets, ".dmg") : "9.8 MB";
-
-    const winLink = latestRelease ? getAssetUrl(latestRelease.assets, ".exe") : null;
-    const winSize = latestRelease ? getAssetSize(latestRelease.assets, ".exe") : null;
-
-    const linuxLink = latestRelease ? getAssetUrl(latestRelease.assets, ".AppImage") : null;
-    const linuxSize = latestRelease ? getAssetSize(latestRelease.assets, ".AppImage") : null;
-
-    const handleCopyCommand = () => {
-        navigator.clipboard.writeText(
-            HOMEBREW_COMMANDS.join("\n")
-        );
-        setCopied(true);
-        if (typeof window !== "undefined" && window.gtag) {
-            window.gtag("event", "copy_brew_command", {
-                event_category: "engagement",
-                event_label: "macOS Terminal",
-            });
-        }
-        setTimeout(() => setCopied(false), 2000);
-    };
-
-    const handleCopyQuarantine = () => {
-        navigator.clipboard.writeText(
-            "xattr -dr com.apple.quarantine /Applications/Devian\\ Desktop.app"
-        );
-        setCopiedQuarantine(true);
-        if (typeof window !== "undefined" && window.gtag) {
-            window.gtag("event", "copy_quarantine_command", {
-                event_category: "engagement",
-                event_label: "macOS quarantine fix",
-            });
-        }
-        setTimeout(() => setCopiedQuarantine(false), 2000);
-    };
-
-    const trackDownload = (version: string, type: "latest" | "old", platform: "mac" | "windows" | "linux") => {
-        if (typeof window !== "undefined" && window.gtag) {
-            window.gtag("event", `download_${platform}_${type}`, {
-                event_category: "download",
-                event_label: version,
-            });
-        }
-    };
-
-    const versionTag = latestRelease?.tag_name || `v${pkgData.version}`;
+    const older = releases.slice(1);
 
     return (
-        <section
-            id="download"
-            className="px-6 md:px-8 py-20 md:py-32 max-w-5xl mx-auto text-center border-t border-white/[0.05]"
-        >
-            <h2 className="text-3xl sm:text-4xl md:text-5xl font-black mb-4 md:mb-6 tracking-tight">
-                Ready to take control?
-            </h2>
+        <section id="download" className="px-6 md:px-8 py-20 md:py-32 max-w-5xl mx-auto text-center border-t border-white/[0.05]">
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-black mb-4 md:mb-6 tracking-tight">Ready to take control?</h2>
+            <p className="text-base sm:text-lg md:text-xl text-white/50 mb-10 md:mb-14 font-light">Free, with every feature. No account, no license key.</p>
 
-            <p className="text-base sm:text-lg md:text-xl text-white/50 mb-10 md:mb-16 font-light">
-                Free, with every feature. No account, no license key.
-            </p>
+            {status === "loading" && (
+                <div className="flex justify-center items-center h-32"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white/20" /></div>
+            )}
 
-            {loading ? (
-                <div className="flex justify-center items-center h-32">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white/20"></div>
+            {(status === "none" || status === "error") && (
+                <div className="max-w-2xl mx-auto rounded-2xl border border-white/10 bg-white/[0.02] p-8 space-y-5">
+                    <div className="mx-auto h-11 w-11 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center"><BellRing className="h-5 w-5 text-primary" /></div>
+                    <div className="space-y-2">
+                        <p className="text-lg font-bold">{status === "none" ? "Devian 2.0 is almost here" : "Couldn't load the downloads"}</p>
+                        <p className="text-sm text-white/50 leading-relaxed">
+                            {status === "none"
+                                ? "Installers for macOS, Windows and Linux will be published on GitHub shortly. Watch the repository for releases to get notified the moment they're out."
+                                : "GitHub didn't answer just now. Every installer is also listed on the releases page."}
+                        </p>
+                    </div>
+                    <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                        <a href={status === "none" ? GITHUB_URL : `${GITHUB_URL}/releases`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 bg-white text-black px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-white/90">
+                            {status === "none" ? "Watch on GitHub" : "Open releases"}
+                        </a>
+                        <a href={`${GITHUB_URL}#readme`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 bg-white/5 border border-white/10 px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-white/10">
+                            Build from source
+                        </a>
+                    </div>
                 </div>
-            ) : (
-                <div className="flex flex-col items-center gap-8 max-w-4xl mx-auto">
+            )}
 
-                    {/* Homebrew Install — macOS only */}
-                    <div className="w-full max-w-2xl bg-[#0A0A0C] border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
-                        <div className="bg-white/5 px-4 py-3 border-b border-white/5 flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <Terminal className="h-4 w-4 text-white/50" />
-                                <span className="text-xs font-mono text-white/50">
-                                    Install with Homebrew <span className="text-white/25">(macOS)</span>
-                                </span>
-                            </div>
-                            <button
-                                onClick={handleCopyCommand}
-                                className="text-white/40 hover:text-white transition flex items-center gap-1.5 text-xs bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded-lg"
-                            >
-                                <Copy className="h-3.5 w-3.5" />
-                                {copied ? "Copied!" : "Copy"}
-                            </button>
-                        </div>
-                        <div className="p-6">
-                            <code className="text-sm md:text-base font-mono text-[#4ADE80] whitespace-pre text-left block">
-{HOMEBREW_COMMANDS.map((c) => `$ ${c}`).join("\n")}
-                            </code>
-                        </div>
+            {status === "ready" && latest && (
+                <div className="flex flex-col items-center gap-8 max-w-3xl mx-auto">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
+                        {PLATFORMS.map((p) => <PlatformCard key={p.id} platform={p} files={installers(latest, p.id)} version={latest.tag_name} />)}
                     </div>
-
-                    {/* Divider */}
-                    <div className="flex items-center gap-4 w-full max-w-2xl">
-                        <div className="h-px bg-white/10 flex-1"></div>
-                        <span className="text-xs text-white/40 uppercase tracking-widest">
-                            Or Download Directly
-                        </span>
-                        <div className="h-px bg-white/10 flex-1"></div>
-                    </div>
-
-                    {/* Platform Cards */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full max-w-2xl">
-                        {/* macOS */}
-                        <a
-                            href={macLink || "#"}
-                            download={!!macLink}
-                            onClick={() => trackDownload(versionTag, "latest", "mac")}
-                            className="bg-white hover:bg-white/90 text-black p-6 rounded-2xl flex flex-col items-start gap-4 transition-all hover:scale-[1.02] active:scale-[0.98] shadow-[0_0_30px_rgba(255,255,255,0.08)] hover:shadow-[0_0_50px_rgba(255,255,255,0.15)]"
-                        >
-                            <div className="h-10 w-10 bg-[#F5F5F7] rounded-xl flex items-center justify-center shadow-inner">
-                                <AppleLogo className="h-5 w-5 text-black" />
-                            </div>
-                            <div>
-                                <div className="text-[10px] font-bold uppercase tracking-widest text-black/40 mb-1">macOS</div>
-                                <div className="text-base font-black">Download .dmg</div>
-                                <div className="text-[11px] text-black/40 mt-0.5">Apple Silicon · {macSize || "—"}</div>
-                            </div>
-                        </a>
-
-                        {/* Windows */}
-                        <a
-                            href={winLink || "#download"}
-                            download={!!winLink}
-                            onClick={() => winLink && trackDownload(versionTag, "latest", "windows")}
-                            className="bg-[#0A0A0C] border border-blue-500/20 hover:border-blue-500/40 text-white p-6 rounded-2xl flex flex-col items-start gap-4 transition-all hover:scale-[1.02] active:scale-[0.98] shadow-[0_0_20px_rgba(59,130,246,0.04)] hover:shadow-[0_0_40px_rgba(59,130,246,0.1)]"
-                        >
-                            <div className="h-10 w-10 bg-blue-500/10 rounded-xl flex items-center justify-center border border-blue-500/20 shadow-inner">
-                                <WindowsLogo className="h-5 w-5 text-blue-400" />
-                            </div>
-                            <div>
-                                <div className="text-[10px] font-bold uppercase tracking-widest text-white/30 mb-1">Windows</div>
-                                <div className="text-base font-black">{winLink ? "Download .exe" : "Coming Soon"}</div>
-                                <div className="text-[11px] text-white/30 mt-0.5">Windows 10+ · {winSize || "—"}</div>
-                            </div>
-                        </a>
-
-                        {/* Linux */}
-                        <a
-                            href={linuxLink || "#download"}
-                            download={!!linuxLink}
-                            onClick={() => linuxLink && trackDownload(versionTag, "latest", "linux")}
-                            className="bg-[#0A0A0C] border border-orange-500/20 hover:border-orange-500/40 text-white p-6 rounded-2xl flex flex-col items-start gap-4 transition-all hover:scale-[1.02] active:scale-[0.98] shadow-[0_0_20px_rgba(249,115,22,0.04)] hover:shadow-[0_0_40px_rgba(249,115,22,0.1)]"
-                        >
-                            <div className="h-10 w-10 bg-orange-500/10 rounded-xl flex items-center justify-center border border-orange-500/20 shadow-inner">
-                                <LinuxLogo className="h-5 w-5 text-orange-400" />
-                            </div>
-                            <div>
-                                <div className="text-[10px] font-bold uppercase tracking-widest text-white/30 mb-1">Linux</div>
-                                <div className="text-base font-black">{linuxLink ? "Download .AppImage" : "Coming Soon"}</div>
-                                <div className="text-[11px] text-white/30 mt-0.5">Ubuntu 22.04+ · {linuxSize || "—"}</div>
-                            </div>
-                        </a>
-                    </div>
-
-                    {/* macOS Quarantine Fix */}
-                    <div className="w-full max-w-2xl bg-[#0A0A0C] border border-yellow-500/20 rounded-2xl overflow-hidden shadow-2xl">
-                        <div className="bg-yellow-500/10 px-4 py-3 border-b border-yellow-500/20 flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <Terminal className="h-4 w-4 text-yellow-400" />
-                                <span className="text-xs font-mono text-yellow-300">
-                                    If macOS blocks Devian Desktop
-                                </span>
-                            </div>
-                            <button
-                                onClick={handleCopyQuarantine}
-                                className="text-yellow-200/70 hover:text-yellow-100 transition flex items-center gap-1.5 text-xs bg-yellow-500/10 hover:bg-yellow-500/20 px-3 py-1.5 rounded-lg"
-                            >
-                                <Copy className="h-3.5 w-3.5" />
-                                {copiedQuarantine ? "Copied!" : "Copy"}
-                            </button>
-                        </div>
-                        <div className="p-6">
-                            <p className="text-xs text-white/60 mb-4 text-left">
-                                macOS may block the app because it is not yet notarized by Apple.
-                                Run the command below to remove the quarantine flag.
-                            </p>
-                            <code className="text-sm md:text-base font-mono text-[#4ADE80] whitespace-pre text-left block">
-$ xattr -dr com.apple.quarantine /Applications/Devian\ Desktop.app
-                            </code>
-                        </div>
-                    </div>
-
-                    <p className="text-xs md:text-sm text-white/40 font-medium">
-                        Current Version:{" "}
-                        <span className="text-white/80">{versionTag}</span>
-                        {" "}· macOS 12+ · Windows 10+ · Ubuntu 22.04+
+                    <p className="text-xs md:text-sm text-white/40">
+                        Latest: <a href={latest.html_url} target="_blank" rel="noopener noreferrer" className="text-white/80 hover:text-white">{latest.tag_name}</a>
+                        {" "}· {new Date(latest.published_at).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })} · updates install from inside the app
                     </p>
 
-                    {/* Version History */}
-                    <div className="mt-12 md:mt-16 w-full max-w-2xl">
-                        <button
-                            onClick={() => setShowHistory(!showHistory)}
-                            className="flex items-center justify-center gap-2 text-white/50 hover:text-white transition-colors text-sm font-medium mx-auto"
-                        >
-                            View Version History
-                            <ChevronDown className={`h-4 w-4 transition-transform ${showHistory ? "rotate-180" : ""}`} />
-                        </button>
-
-                        {showHistory && oldReleases.length > 0 && (
-                            <div className="mt-8 md:mt-10 bg-[#0A0A0C] border border-white/10 rounded-2xl overflow-x-auto shadow-2xl">
-                                <table className="min-w-full divide-y divide-white/5">
-                                    <thead className="bg-white/5 border-b border-white/10">
-                                        <tr>
-                                            <th className="px-4 py-4 text-left text-xs font-bold uppercase tracking-wider text-white/60">Version</th>
-                                            <th className="px-4 py-4 text-left text-xs font-bold uppercase tracking-wider text-white/60">Date</th>
-                                            <th className="px-4 py-4 text-center text-xs font-bold uppercase tracking-wider text-white/60">macOS</th>
-                                            <th className="px-4 py-4 text-center text-xs font-bold uppercase tracking-wider text-white/60">Windows</th>
-                                            <th className="px-4 py-4 text-center text-xs font-bold uppercase tracking-wider text-white/60">Linux</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-white/5">
-                                        {oldReleases.map((release) => {
-                                            const mLink = getAssetUrl(release.assets, ".dmg");
-                                            const wLink = getAssetUrl(release.assets, ".exe");
-                                            const lLink = getAssetUrl(release.assets, ".AppImage");
-                                            return (
-                                                <tr key={release.id}>
-                                                    <td className="px-4 py-4 text-white text-sm font-medium">{release.tag_name}</td>
-                                                    <td className="px-4 py-4 text-white/50 text-sm">
-                                                        {new Date(release.published_at).toLocaleDateString()}
-                                                    </td>
-                                                    <td className="px-4 py-4 text-center">
-                                                        {mLink ? (
-                                                            <a href={mLink} download onClick={() => trackDownload(release.tag_name, "old", "mac")} className="text-white/70 hover:text-white transition flex items-center gap-1 justify-center text-sm">
-                                                                <Download className="h-3.5 w-3.5" />.dmg
-                                                            </a>
-                                                        ) : <span className="text-white/20">—</span>}
-                                                    </td>
-                                                    <td className="px-4 py-4 text-center">
-                                                        {wLink ? (
-                                                            <a href={wLink} download onClick={() => trackDownload(release.tag_name, "old", "windows")} className="text-blue-400/70 hover:text-blue-400 transition flex items-center gap-1 justify-center text-sm">
-                                                                <Download className="h-3.5 w-3.5" />.exe
-                                                            </a>
-                                                        ) : <span className="text-white/20">—</span>}
-                                                    </td>
-                                                    <td className="px-4 py-4 text-center">
-                                                        {lLink ? (
-                                                            <a href={lLink} download onClick={() => trackDownload(release.tag_name, "old", "linux")} className="text-orange-400/70 hover:text-orange-400 transition flex items-center gap-1 justify-center text-sm">
-                                                                <Download className="h-3.5 w-3.5" />.AppImage
-                                                            </a>
-                                                        ) : <span className="text-white/20">—</span>}
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })}
-                                    </tbody>
-                                </table>
-                            </div>
-                        )}
+                    <div className="flex flex-col gap-4 w-full max-w-2xl">
+                        <CopyBlock label="Or with Homebrew (macOS)" lines={HOMEBREW_COMMANDS} event="copy_brew_command" />
+                        <div className="text-left space-y-2">
+                            <CopyBlock label="If macOS says the app can't be opened" lines={["xattr -dr com.apple.quarantine /Applications/Devian*.app"]} event="copy_quarantine_command" />
+                            <p className="text-[11px] text-white/35 px-1">Devian isn&apos;t notarized by Apple yet. This clears the download flag so macOS lets it open.</p>
+                        </div>
                     </div>
+
+                    {older.length > 0 && (
+                        <div className="w-full">
+                            <button onClick={() => setShowHistory(!showHistory)} className="flex items-center justify-center gap-2 text-white/50 hover:text-white transition-colors text-sm font-medium mx-auto" aria-expanded={showHistory}>
+                                Earlier versions <ChevronDown className={`h-4 w-4 transition-transform ${showHistory ? "rotate-180" : ""}`} />
+                            </button>
+                            {showHistory && (
+                                <ul className="mt-6 divide-y divide-white/5 rounded-2xl border border-white/10 bg-[#0A0A0C] text-left">
+                                    {older.map((r) => (
+                                        <li key={r.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 px-5 py-3 text-sm">
+                                            <a href={r.html_url} target="_blank" rel="noopener noreferrer" className="font-medium text-white hover:underline">{r.tag_name}</a>
+                                            <span className="text-white/40">{new Date(r.published_at).toLocaleDateString()}</span>
+                                            <span className="ml-auto flex gap-3">
+                                                {PLATFORMS.flatMap((p) => installers(r, p.id).slice(0, 1)).map((a) => (
+                                                    <a key={a.name} href={a.browser_download_url} className="text-white/60 hover:text-white">{extension(a.name)}</a>
+                                                ))}
+                                            </span>
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
+                        </div>
+                    )}
                 </div>
             )}
         </section>
