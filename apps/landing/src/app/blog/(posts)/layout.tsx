@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { ArrowLeft, Activity } from "lucide-react";
+import { SiteFooter } from "@/components/SiteFooter";
 
 export default function BlogLayout({ children }: { children: React.ReactNode }) {
     return (
@@ -26,6 +27,7 @@ export default function BlogLayout({ children }: { children: React.ReactNode }) 
                     {children}
                 </div>
             </main>
+            <SiteFooter />
         </div>
     );
 }

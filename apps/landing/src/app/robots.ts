@@ -1,13 +1,12 @@
-import { MetadataRoute } from 'next'
+import type { MetadataRoute } from "next";
+import { SITE_URL } from "@/config/site";
 
 export default function robots(): MetadataRoute.Robots {
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://devian.app';
-
     return {
         rules: {
-            userAgent: '*',
-            allow: '/',
+            userAgent: "*",
+            allow: "/",
         },
-        sitemap: `${baseUrl}/sitemap.xml`,
-    }
+        sitemap: `${SITE_URL}/sitemap.xml`,
+    };
 }

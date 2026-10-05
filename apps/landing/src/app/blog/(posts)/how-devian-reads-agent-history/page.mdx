@@ -1,3 +1,10 @@
+import { PostJsonLd } from "@/components/JsonLd"
+import { postMetadata } from "@/lib/posts"
+
+export const metadata = postMetadata("how-devian-reads-agent-history")
+
+<PostJsonLd slug="how-devian-reads-agent-history" />
+
 # How Devian reads your agents' history
 
 Devian doesn't hook into your agents or proxy their traffic. Every agent already writes a detailed record of its work to disk; Devian reads those files, read-only, and never changes them.

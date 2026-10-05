@@ -1,26 +1,28 @@
-import { MetadataRoute } from 'next'
+import type { MetadataRoute } from "next";
+import { SITE_URL } from "@/config/site";
+import { POSTS, postPath } from "@/lib/posts";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://devian.app';
+    const latestPost = POSTS.map((p) => p.date).sort().at(-1);
 
     return [
         {
-            url: baseUrl,
+            url: SITE_URL,
             lastModified: new Date(),
-            changeFrequency: 'weekly',
+            changeFrequency: "weekly",
             priority: 1,
         },
         {
-            url: `${baseUrl}/blog`,
-            lastModified: new Date(),
-            changeFrequency: 'weekly',
+            url: `${SITE_URL}/blog`,
+            lastModified: latestPost,
+            changeFrequency: "weekly",
             priority: 0.8,
         },
-        ...['introducing-devian', 'how-devian-reads-agent-history'].map((slug) => ({
-            url: `${baseUrl}/blog/${slug}`,
-            lastModified: new Date(),
-            changeFrequency: 'monthly' as const,
+        ...POSTS.map((post) => ({
+            url: `${SITE_URL}${postPath(post.slug)}`,
+            lastModified: post.date,
+            changeFrequency: "monthly" as const,
             priority: 0.6,
         })),
-    ]
+    ];
 }
